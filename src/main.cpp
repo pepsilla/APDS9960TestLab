@@ -31,6 +31,8 @@ void getGestureData();
 void showRegisters();
 void echoesProximityVariables();
 void echoesGestureVariables();
+void echoesFlags();
+void echoesTimes();
 
 void CHIP_on();
 void CHIP_off();
@@ -108,8 +110,10 @@ void setup() {
 void loop() {
 
   //Begin format data serial
-  Serial.println(F("APDS9960@pepsilla_TestLab"));
-  Serial.println(F("{"));
+  if(!_showI2cBuffer)Serial.println(F("APDS9960@pepsilla_TestLab"));
+  if(!_showI2cBuffer)Serial.println(F("{"));
+  //First Object for rapid mode identification
+  if(!_showI2cBuffer)echoesFlags();
   //Get time in for mettering propousses
   time_in = micros();
   //Read 0xff chip registers in 8x32 bytes blocks
@@ -142,17 +146,19 @@ void loop() {
   if(i2cBuffer[0xaf]&1)getGestureData();
 
   //Echoes Proximity data variables
-  echoesProximityVariables();
-  echoesGestureVariables();
+  if(!_showI2cBuffer)echoesProximityVariables();
+  if(!_showI2cBuffer)echoesGestureVariables();
   //Dump registers data and time proccess if needed
   if(_showI2cBuffer)showRegisters();
   //Ends output serial data in this loop
-  Serial.println(F("}"));
+  //And include times for control processes.
+  if(!_showI2cBuffer)echoesTimes();
+  if(!_showI2cBuffer)Serial.println(F("}"));
 
   delay(_poolDelay);
-  Serial.print(F("{SERIAL:\""));
+  //if(!_showI2cBuffer)Serial.print(F("{APDS9960_pepsillaTestLab>\""));
   sCmd.readSerial(); // We don't do much, just process serial commands
-  Serial.println(F("\"}"));
+  //if(!_showI2cBuffer)Serial.println(F("\"}"));
   //delay(500);
 }
 
@@ -229,10 +235,12 @@ void getProximityData()
   {
     while(Wire.available())value=Wire.read();
   }
-  Serial.print(F("\tPROXIMITY_DATA{PDATA:"));
-  Serial.print(value);
-  Serial.println(F("},"));
-
+  if(!_showI2cBuffer)
+  {
+    Serial.print(F("\tPROXIMITY_DATA{PDATA:"));
+    Serial.print(value);
+    Serial.println(F("},"));
+  }
 
 }
 
@@ -245,7 +253,7 @@ void getAlsData()
   uint8_t loByte = 0;
   uint8_t hiByte = 0;
 
-  Serial.print(F("\tALS_DATA{CLEAR:"));
+  if(!_showI2cBuffer)Serial.print(F("\tALS_DATA{CLEAR:"));
   Wire.beginTransmission(CHIP_ADDR);
   Wire.write(0x94);
   Wire.endTransmission();
@@ -260,8 +268,8 @@ void getAlsData()
     regVals |= loByte;
     //Serial.print(regVals);
   }
-  Serial.print(regVals);
-  Serial.print(F(",RED:"));
+  if(!_showI2cBuffer)Serial.print(regVals);
+  if(!_showI2cBuffer)Serial.print(F(",RED:"));
   Wire.beginTransmission(CHIP_ADDR);
   Wire.write(0x96);
   Wire.endTransmission();
@@ -276,8 +284,8 @@ void getAlsData()
     regVals |= loByte;
     //Serial.print(regVals);
   }
-  Serial.print(regVals);
-  Serial.print(F(",GREEN:"));
+  if(!_showI2cBuffer)Serial.print(regVals);
+  if(!_showI2cBuffer)Serial.print(F(",GREEN:"));
   Wire.beginTransmission(CHIP_ADDR);
   Wire.write(0x98);
   Wire.endTransmission();
@@ -292,8 +300,8 @@ void getAlsData()
     regVals |= loByte;
     //Serial.print(regVals);
   }
-  Serial.print(regVals);
-  Serial.print(F(",BLUE:"));
+  if(!_showI2cBuffer)Serial.print(regVals);
+  if(!_showI2cBuffer)Serial.print(F(",BLUE:"));
   Wire.beginTransmission(CHIP_ADDR);
   Wire.write(0x98);
   Wire.endTransmission();
@@ -306,8 +314,8 @@ void getAlsData()
     regVals = hiByte;
     regVals <<= 8;
     regVals |= loByte;
-    Serial.print(regVals);
-    Serial.println(F("},"));
+    if(!_showI2cBuffer)Serial.print(regVals);
+    if(!_showI2cBuffer)Serial.println(F("},"));
   }
 }
 
@@ -329,15 +337,18 @@ void getGestureData()
     uint8_t downValue = Wire.read();
     uint8_t leftValue = Wire.read();
     uint8_t rightValue = Wire.read();
-    Serial.print(F("\t{GESTURE_DATA:{UP:"));
-    Serial.print(upValue);
-    Serial.print(F(",DOWN:"));
-    Serial.print(downValue);
-    Serial.print(F(",LEFT:"));
-    Serial.print(leftValue);
-    Serial.print(F(",RIGHT:"));
-    Serial.print(rightValue);
-    Serial.println("}");
+    if(!_showI2cBuffer)
+    {
+      Serial.print(F("\t{GESTURE_DATA:{UP:"));
+      Serial.print(upValue);
+      Serial.print(F(",DOWN:"));
+      Serial.print(downValue);
+      Serial.print(F(",LEFT:"));
+      Serial.print(leftValue);
+      Serial.print(F(",RIGHT:"));
+      Serial.print(rightValue);
+      Serial.println("}");
+    }
   }
 }
 
@@ -359,6 +370,60 @@ void cpstatAutoGain()
   }
 }
 
+//Echoes Flags
+void echoesFlags()
+{
+  String controlFlags = "\"";
+  if(i2cBuffer[0x80]&1)controlFlags += F("PON,");
+  if(i2cBuffer[0x80]&2)controlFlags += F("AEN,");
+  if(i2cBuffer[0x80]&4)controlFlags += F("PEN,");
+  if(i2cBuffer[0x80]&8)controlFlags += F("WEN,");
+  if(i2cBuffer[0x80]&16)controlFlags += F("AIEN,");
+  if(i2cBuffer[0x80]&32)controlFlags += F("PIEN,");
+  if(i2cBuffer[0x80]&64)controlFlags += F("GEN,");
+  if(i2cBuffer[0x8d]&2)controlFlags += F("WLONG,");
+  if(i2cBuffer[0x90]&128)controlFlags += F("PSIEN,");
+  if(i2cBuffer[0x90]&64)controlFlags += F("CPSIEN,");
+  if(i2cBuffer[0x93]&128)controlFlags += F("CPSAT,");
+  if(i2cBuffer[0x93]&64)controlFlags += F("PGSAT,");
+  if(i2cBuffer[0x93]&32)controlFlags += F("PINT,");
+  if(i2cBuffer[0x93]&16)controlFlags += F("AINT,");
+  if(i2cBuffer[0x93]&4)controlFlags += F("GINT,");
+  if(i2cBuffer[0x93]&2)controlFlags += F("PVALID,");
+  if(i2cBuffer[0x93]&1)controlFlags += F("AVALID,");
+  if(i2cBuffer[0x9F]&32)controlFlags += F("PCMP,");
+  if(i2cBuffer[0x9F]&16)controlFlags += F("SAI,");
+  if(i2cBuffer[0x9F]&8)controlFlags += F("PMSK_U,");
+  if(i2cBuffer[0x9F]&4)controlFlags += F("PMSK_D,");
+  if(i2cBuffer[0x9F]&2)controlFlags += F("PMSK_L,");
+  if(i2cBuffer[0x9F]&1)controlFlags += F("PMSK_R,");
+  if(i2cBuffer[0xAB]&4)controlFlags += F("GFIFO_CLR,");
+  if(i2cBuffer[0xAB]&2)controlFlags += F("GIEN,");
+  if(i2cBuffer[0xAB]&1)controlFlags += F("GMODE,");
+  if(i2cBuffer[0xAF]&2)controlFlags += F("GFOW,");
+  if(i2cBuffer[0xAF]&1)controlFlags += F("GVALID,");
+  controlFlags += F("--\",");
+  Serial.print(F("\tFLAGS:"));
+  Serial.println(controlFlags);
+}
+
+//Echoes time this->processing variables.
+void echoesTimes()
+{
+  Serial.println(F("\tTIMES:"));
+  Serial.println(F("\t{"));
+  Serial.print(F("\t\ti2c_time:\""));
+  Serial.print(i2cTime_proc/1000);
+  Serial.println(F("ms.\","));
+  Serial.print(F("\t\tChip_ID:\"0x"));
+  if(i2cBuffer[0x92]<16)Serial.print("0");
+  Serial.print(i2cBuffer[0x92],16);
+  time_proc = micros()-time_in;
+  Serial.println(F("\","));
+  Serial.print(F("\t\tproc_time:"));
+  Serial.println(time_proc/1000);
+  Serial.println(F("\t}"));
+}
 
 //Echoes Proximity data variables
 void echoesProximityVariables()
@@ -457,7 +522,7 @@ void echoesProximityVariables()
   value = i2cBuffer[0x8C]&11110000;
   value >>= 4;
   Serial.println(value);
-  Serial.println(F("\t}"));
+  Serial.println(F("\t},"));
 }
 
 //Echoes Gesture data variables
@@ -689,82 +754,31 @@ void echoesGestureVariables()
   value = i2cBuffer[0xAe];
   Serial.print(value);
   Serial.println();
-  Serial.println(F("\t}"));
+  Serial.println(F("\t},"));
 }
 
 //Dump registers data and time proccess
 void showRegisters()
 {
-  String controlFlags = "[";
+
   point_Buffer = 0;
   uint8_t counterFile, counterRow,value;
-  Serial.println(F("\tDUMP_REGISTERS"));
-  Serial.println(F("\t{"));
+  //Serial.println(F("\tDUMP_REGISTERS"));
+  //Serial.println(F("\t{"));
   for(counterFile = 0;counterFile<16;counterFile++){
-    Serial.print(F("\t\t"));
-    Serial.print(counterFile,16);
-    Serial.print(":[");
+    //Serial.print(F("\t\t"));
+    Serial.print(counterFile); //,16);
+    Serial.print(":");
     for(counterRow=0;counterRow<16;counterRow++){
       uint8_t pointerValue = counterFile*16+counterRow;
       uint8_t pointedValue = i2cBuffer[pointerValue];
-      if(pointedValue<16)Serial.print("0");
-      Serial.print(pointedValue,16);
+      //if(pointedValue<16)Serial.print("0");
+      Serial.print(pointedValue); //,16);
       if(counterRow<15)Serial.print(",");
     }
-    Serial.println("],");
-    switch(counterFile)
-    {
-      case 8:
-          if(i2cBuffer[0x80]&1)controlFlags += F("PON,");
-          if(i2cBuffer[0x80]&2)controlFlags += F("AEN,");
-          if(i2cBuffer[0x80]&4)controlFlags += F("PEN,");
-          if(i2cBuffer[0x80]&8)controlFlags += F("WEN,");
-          if(i2cBuffer[0x80]&16)controlFlags += F("AIEN,");
-          if(i2cBuffer[0x80]&32)controlFlags += F("PIEN,");
-          if(i2cBuffer[0x80]&64)controlFlags += F("GEN,");
-          if(i2cBuffer[0x8d]&2)controlFlags += F("WLONG,");
-          break;
-       case 9:
-          if(i2cBuffer[0x90]&128)controlFlags += F("PSIEN,");
-          if(i2cBuffer[0x90]&64)controlFlags += F("CPSIEN,");
-          if(i2cBuffer[0x93]&128)controlFlags += F("CPSAT,");
-          if(i2cBuffer[0x93]&64)controlFlags += F("PGSAT,");
-          if(i2cBuffer[0x93]&32)controlFlags += F("PINT,");
-          if(i2cBuffer[0x93]&16)controlFlags += F("AINT,");
-          if(i2cBuffer[0x93]&4)controlFlags += F("GINT,");
-          if(i2cBuffer[0x93]&2)controlFlags += F("PVALID,");
-          if(i2cBuffer[0x93]&1)controlFlags += F("AVALID,");
-          if(i2cBuffer[0x9F]&32)controlFlags += F("PCMP,");
-          if(i2cBuffer[0x9F]&16)controlFlags += F("SAI,");
-          if(i2cBuffer[0x9F]&8)controlFlags += F("PMSK_U,");
-          if(i2cBuffer[0x9F]&4)controlFlags += F("PMSK_D,");
-          if(i2cBuffer[0x9F]&2)controlFlags += F("PMSK_L,");
-          if(i2cBuffer[0x9F]&1)controlFlags += F("PMSK_R,");
-          break;
-       case 10:
-          if(i2cBuffer[0xAB]&4)controlFlags += F("GFIFO_CLR,");
-          if(i2cBuffer[0xAB]&2)controlFlags += F("GIEN,");
-          if(i2cBuffer[0xAB]&1)controlFlags += F("GMODE,");
-          if(i2cBuffer[0xAF]&2)controlFlags += F("GFOW,");
-          if(i2cBuffer[0xAF]&1)controlFlags += F("GVALID,");
-          break;
-    }
+    Serial.println(); //F("\""));
   }
-  //controlFlags += controlFlags.length();
-  controlFlags += F("--],");
-  Serial.print(F("\t\tFLAGS:"));
-  Serial.println(controlFlags);
-  Serial.print(F("\t\tTIMES:{"));
-  Serial.print("i2c_time:\"");
-  Serial.print(i2cTime_proc/1000);
-  Serial.print("ms.\",Chip_ID:\"0x");
-  if(i2cBuffer[0x92]<16)Serial.print("0");
-  Serial.print(i2cBuffer[0x92],16);
-  time_proc = micros()-time_in;
-  Serial.print("\",proc_time:");
-  Serial.print(time_proc/1000);
-  Serial.println(F("}"));
-  Serial.println(F("\t}"));
+  //Serial.println(F("\t}"));
 }
 
 
@@ -925,8 +939,10 @@ void pplen() {
     //Serial.println(aNumber);
     if(aNumber<4)
     {
+      uint8_t value;
       aNumber <<= 6;
-      aNumber |= (i2cBuffer[0x8e]&0b11000000);
+      value = i2cBuffer[0x8e]&0b00111111;
+      aNumber |= value;
       Wire.beginTransmission(CHIP_ADDR);
       Wire.write(0x8e);
       Wire.write(aNumber);
