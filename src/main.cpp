@@ -23,6 +23,7 @@ In two words: POOL MODE
 void readDataRegisters();
 void clearAlsInterrupt();
 void clearProximityInterrupt();
+void clearGestureInterrupt();
 void getProximityData();
 void getAlsData();
 void cpstatAutoGain();
@@ -129,6 +130,8 @@ void loop() {
   //ALS interrupt
   // Process Light and Colour interrupt if flag is true.
   if(i2cBuffer[0x93]&16)clearAlsInterrupt();
+  //gestureInterrupt
+  if(i2cBuffer[0x93]&0b00000100)clearGestureInterrupt();
 
   //Proximity data value ready
   // Get proximity data when proximity data is valid
@@ -180,6 +183,16 @@ void clearAlsInterrupt()
   Wire.beginTransmission(CHIP_ADDR);
   Wire.write(0xe6);
   Wire.write(0);
+  Wire.endTransmission();
+}
+
+//Process Gesture Interrupts
+void clearGestureInterrupt()
+{
+  //GFIFO_CLR
+  Wire.beginTransmission(CHIP_ADDR);
+    Wire.write(0xaB);
+    Wire.write((i2cBuffer[0xab]|0b00000100));
   Wire.endTransmission();
 }
 
@@ -324,11 +337,7 @@ void getAlsData()
 void getGestureData()
 {
   Wire.beginTransmission(CHIP_ADDR);
-    Wire.write(0xaB);
-    Wire.write(i2cBuffer[0xaB]&0b11111110);
-  Wire.endTransmission();
-  Wire.beginTransmission(CHIP_ADDR);
-  Wire.write(0xfc);
+    Wire.write(0xfc);
   Wire.endTransmission();
   uint8_t readValues = Wire.requestFrom(CHIP_ADDR, 4);
   if(readValues==4)

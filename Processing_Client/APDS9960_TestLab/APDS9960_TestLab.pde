@@ -12,6 +12,8 @@ DropdownList pplen;
 Toggle chip;
 Toggle pon;
 Toggle aon;
+Toggle gon;
+Toggle gmode;
 Numberbox ppulse;
 Numberbox delay;
 
@@ -89,7 +91,7 @@ void setup(){
     
   //ON/OFF BUTTON
   chip = cp5.addToggle("CHIP")
-     .setPosition(40,250)
+     .setPosition(40,150)
      .setSize(50,20)
      .setValue(false)
      .setMode(ControlP5.SWITCH)
@@ -97,13 +99,26 @@ void setup(){
    
    //PON/POFF BUTTON
   pon = cp5.addToggle("PROXIMITY")
-     .setPosition(40,300)
+     .setPosition(40,200)
      .setSize(50,20)
      .setValue(false)
      .setMode(ControlP5.SWITCH)
      ;
      //AON/POFF BUTTON
   aon = cp5.addToggle("ALS_RGB")
+     .setPosition(40,250)
+     .setSize(50,20)
+     .setValue(false)
+     .setMode(ControlP5.SWITCH)
+     ;
+     
+  gon = cp5.addToggle("GESTURE")
+     .setPosition(40,300)
+     .setSize(50,20)
+     .setValue(false)
+     .setMode(ControlP5.SWITCH)
+     ;
+  gmode = cp5.addToggle("GMODE")
      .setPosition(40,350)
      .setSize(50,20)
      .setValue(false)
@@ -260,6 +275,19 @@ void controlEvent(ControlEvent theEvent) {
       miPuerto.write(str(int(val)));
       miPuerto.write("\r\n");
     }
+  }else if (theEvent.getName() == "GMODE"){
+    if(miPuerto!=null)
+    {
+      miPuerto.write("GMODE ");
+      miPuerto.write(str(int(val)));
+      miPuerto.write("\r\n");
+    }
+  }else if (theEvent.getName() == "GESTURE"){
+    if(miPuerto!=null)
+    {
+      if(int(val)==1)miPuerto.write("GON\r\n ");
+      else miPuerto.write("GOFF\r\n");
+    }
   }
   
   if (theEvent.isGroup()) {
@@ -348,6 +376,8 @@ void hideChipControls()
   ppulse.hide();
   pplen.hide();
   delay.hide();
+  gmode.hide();
+  gon.hide();
 }
 
 void showChipControls()
@@ -361,4 +391,6 @@ void showChipControls()
   ppulse.show();
   pplen.show();
   delay.show();
+  gmode.show();
+  gon.show();
 }
