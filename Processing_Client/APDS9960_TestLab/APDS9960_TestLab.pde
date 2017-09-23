@@ -9,6 +9,13 @@ DropdownList baud;
 DropdownList again;
 DropdownList pgain;
 DropdownList pplen;
+DropdownList gdims;
+DropdownList gplen;
+DropdownList ledboost;
+DropdownList gldrive;
+DropdownList gexpers;
+DropdownList gexmsk;
+DropdownList gfifoth;
 Toggle chip;
 Toggle pon;
 Toggle aon;
@@ -16,6 +23,10 @@ Toggle gon;
 Toggle gmode;
 Numberbox ppulse;
 Numberbox delay;
+Numberbox gexth;
+Numberbox gpenth;
+Numberbox gpulse;
+Numberbox gwtime;
 
 int APDS9960Buffer[] =
 {
@@ -46,7 +57,7 @@ int _level;
 String[] arduinos;
 
 void setup(){
-  size(800, 600);
+  size(800, 650);
   ControlP5 cp5 = new ControlP5(this);
   surface.setTitle("APDS9660_TestLab@pepsilla");
 
@@ -89,9 +100,40 @@ void setup(){
     .setPosition(460, 20)
     .setSize(50,200);
     
+  //gdims dropdown
+   gdims = cp5.addDropdownList("GDIMS")
+    .setPosition(520, 20)
+    .setSize(50,200);
+  //gplen dropdown
+   gplen = cp5.addDropdownList("GPLEN")
+    .setPosition(580, 20)
+    .setSize(50,200);
+  
+  //ledboost dropdown
+   ledboost = cp5.addDropdownList("LEDBOOST")
+    .setPosition(340, 510)
+    .setSize(50,200);
+  
+  //gldrive dropdown
+   gldrive = cp5.addDropdownList("GLDRIVE")
+    .setPosition(400, 510)
+    .setSize(50,200);
+  //gexpers dropdown
+   gexpers = cp5.addDropdownList("GEXPERS")
+    .setPosition(460, 510)
+    .setSize(50,200);
+  //gexmks dropdown
+   gexmsk = cp5.addDropdownList("GEXMSK")
+    .setPosition(520, 510)
+    .setSize(50,200);
+  //gfifoth dropdown
+   gfifoth = cp5.addDropdownList("GFIFOTH")
+    .setPosition(580, 510)
+    .setSize(50,200);
+    
   //ON/OFF BUTTON
   chip = cp5.addToggle("CHIP")
-     .setPosition(40,150)
+     .setPosition(40,10)
      .setSize(50,20)
      .setValue(false)
      .setMode(ControlP5.SWITCH)
@@ -99,47 +141,81 @@ void setup(){
    
    //PON/POFF BUTTON
   pon = cp5.addToggle("PROXIMITY")
-     .setPosition(40,200)
+     .setPosition(40,60)
      .setSize(50,20)
      .setValue(false)
      .setMode(ControlP5.SWITCH)
      ;
      //AON/POFF BUTTON
   aon = cp5.addToggle("ALS_RGB")
-     .setPosition(40,250)
+     .setPosition(40,110)
      .setSize(50,20)
      .setValue(false)
      .setMode(ControlP5.SWITCH)
      ;
      
   gon = cp5.addToggle("GESTURE")
-     .setPosition(40,300)
+     .setPosition(40,160)
      .setSize(50,20)
      .setValue(false)
      .setMode(ControlP5.SWITCH)
      ;
   gmode = cp5.addToggle("GMODE")
-     .setPosition(40,350)
+     .setPosition(40,210)
      .setSize(50,20)
      .setValue(false)
      .setMode(ControlP5.SWITCH)
      ;
-  //PPLEN values
-  ppulse = cp5.addNumberbox("PPULSE")
-             .setPosition(40,525)
-             .setSize(40,14)
-             .setScrollSensitivity(1)
-             .setRange(0,63)
-             .setValue(0)
-             ;
+  
   //PPLEN values
   delay = cp5.addNumberbox("DELAY")
-             .setPosition(40,400)
+             .setPosition(40,260)
              .setSize(40,14)
              .setScrollSensitivity(1)
              .setRange(0,1000)
              .setValue(100)
              ;
+  //GEXTH values
+  gexth = cp5.addNumberbox("GEXTH")
+             .setPosition(40,300)
+             .setSize(40,14)
+             .setScrollSensitivity(1)
+             .setRange(0,255)
+             .setValue(0)
+             ;           
+  //GPENTH values
+  gpenth = cp5.addNumberbox("GPENTH")
+             .setPosition(40,340)
+             .setSize(40,14)
+             .setScrollSensitivity(1)
+             .setRange(0,255)
+             .setValue(100)
+             ;
+//PPLEN values
+  ppulse = cp5.addNumberbox("PPULSE")
+             .setPosition(40,380)
+             .setSize(40,14)
+             .setScrollSensitivity(1)
+             .setRange(0,63)
+             .setValue(0)
+             ;             
+  //gpulse values
+   gpulse = cp5.addNumberbox("GPULSE")
+    .setPosition(40,520)
+             .setSize(40,410)
+             .setScrollSensitivity(1)
+             .setRange(0,64)
+             .setValue(100)
+             ;
+//gwtime values
+   gwtime = cp5.addNumberbox("GWTIME")
+    .setPosition(40,450)
+             .setSize(40,14)
+             .setScrollSensitivity(1)
+             .setRange(0,7)
+             .setValue(100)
+             ;             
+             
   //Add com ports to dropdown listt
   arduinos = Serial.list();
   for (int i=0; i<arduinos.length; i++)
@@ -189,6 +265,52 @@ void setup(){
   pplen.addItem("16us",2);
   pplen.addItem("32us",3);
   pplen.close();
+  
+  gdims.addItem("U/D & L/R",0);
+  gdims.addItem("U/D Only",1);
+  gdims.addItem("L/R Only",2);
+  gdims.addItem("U/D & L/R",3);
+  gdims.close();
+  
+  gplen.addItem("4 us",0);
+  gplen.addItem("8 us",1);
+  gplen.addItem("16 us",2);
+  gplen.addItem("32 us",3);
+  gplen.close();
+  
+  ledboost.addItem("100%",0);
+  ledboost.addItem("150%",1);
+  ledboost.addItem("200%",2);
+  ledboost.addItem("300%",3);
+  ledboost.close();
+  
+  gldrive.addItem("100 mA",0);
+  gldrive.addItem("50 mA",1);
+  gldrive.addItem("25 mA",2);
+  gldrive.addItem("12.5 mA",3);
+  gldrive.close();
+  
+  gexpers.addItem("1st",0);
+  gexpers.addItem("2nd",1);
+  gexpers.addItem("4th",2);
+  gexpers.addItem("7th",3);
+  gexpers.close();
+  
+  gfifoth.addItem("a1d",0);
+  gfifoth.addItem("a4d",1);
+  gfifoth.addItem("a8d",2);
+  gfifoth.addItem("a16d",3);
+  gfifoth.close();
+  
+  gexmsk.addItem("ALL",0);
+  gexmsk.addItem("R excluded",1);
+  gexmsk.addItem("L excluded",2);
+  gexmsk.addItem("D excluded",3);
+  gexmsk.addItem("U excluded",4);
+  gexmsk.addItem("---",5);
+  gexmsk.addItem("L&D excluded",6);
+  gexmsk.addItem("ALL excluded",7);
+  gexmsk.close();
   
   hideChipControls();
 }
@@ -288,7 +410,118 @@ void controlEvent(ControlEvent theEvent) {
       if(int(val)==1)miPuerto.write("GON\r\n ");
       else miPuerto.write("GOFF\r\n");
     }
+  }else if (theEvent.getName() == "GDIMS"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<4)
+      {
+        miPuerto.write("GDIMS ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
+  }else if (theEvent.getName() == "GPLEN"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<4)
+      {
+        miPuerto.write("GPLEN ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
+  }else if (theEvent.getName() == "GPULSE"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<64)
+      {
+        miPuerto.write("GPULSE ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
+  }else if (theEvent.getName() == "GLDRIVE"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<4)
+      {
+        miPuerto.write("GLDRIVE ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
+  }else if (theEvent.getName() == "GEXPERS"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<4)
+      {
+        miPuerto.write("GEXPERS ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
+  }else if (theEvent.getName() == "GEXMSK"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<16)
+      {
+        miPuerto.write("GEXMSK ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
+  }else if (theEvent.getName() == "GFIFOTH"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<4)
+      {
+        miPuerto.write("GFIFOTH ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
+  }else if (theEvent.getName() == "GEXTH"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<256)
+      {
+        miPuerto.write("GEXTH ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
+  }else if (theEvent.getName() == "GPENTH"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<256)
+      {
+        miPuerto.write("GPENTH ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
+  }else if (theEvent.getName() == "LEDBOOST"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<4)
+      {
+        miPuerto.write("LEDBOOST ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
+  }else if (theEvent.getName() == "GWTIME"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<8)
+      {
+        miPuerto.write("GWTIME ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
   }
+  
   
   if (theEvent.isGroup()) {
     // check if the Event was triggered from a ControlGroup
@@ -378,6 +611,17 @@ void hideChipControls()
   delay.hide();
   gmode.hide();
   gon.hide();
+  gdims.hide();
+  gplen.hide();
+  gpulse.hide();
+  ledboost.hide();
+  gwtime.hide();
+  gldrive.hide();
+  gexpers.hide();
+  gexmsk.hide();
+  gfifoth.hide();
+  gexth.hide();
+  gpenth.hide();
 }
 
 void showChipControls()
@@ -393,4 +637,15 @@ void showChipControls()
   delay.show();
   gmode.show();
   gon.show();
+  gdims.show();
+  gplen.show();
+  gpulse.show();
+  ledboost.show();
+  gwtime.show();
+  gldrive.show();
+  gexpers.show();
+  gexmsk.show();
+  gfifoth.show();
+  gexth.show();
+  gpenth.show();
 }

@@ -54,6 +54,17 @@ void poolDelay();
 void gestureOn();
 void gestureOff();
 void gmode();
+void gdims();
+void gplen();
+void gpulse();
+void ledboost();
+void gwtime();
+void gldrive();
+void gexpers();
+void gexmsk();
+void gfifoth();
+void gexth();
+void gpenth();
 void unrecognized(const char *);
 void initSerialCommands();
 
@@ -82,9 +93,12 @@ uint8_t point_Buffer = 0;
 float time_in;
 float time_proc;
 float i2cTime_proc;
+float timer_1sec;
 
 boolean _showI2cBuffer = false;
 int _poolDelay = 500;
+int _nLoops = 0;
+int _loopsPerSecond = 0;
 
 SerialCommand sCmd; // The demo SerialCommand object
 
@@ -109,6 +123,7 @@ void setup() {
 ** Read chip registers and filter values
 */
 void loop() {
+  if(_nLoops==0) timer_1sec = millis();
 
   //Begin format data serial
   if(!_showI2cBuffer)Serial.println(F("APDS9960@pepsilla_TestLab"));
@@ -163,6 +178,11 @@ void loop() {
   sCmd.readSerial(); // We don't do much, just process serial commands
   //if(!_showI2cBuffer)Serial.println(F("\"}"));
   //delay(500);
+  _nLoops ++ ;
+  if(millis()-timer_1sec >= 1000){
+    _loopsPerSecond = _nLoops;
+    _nLoops = 0;
+  }
 }
 
 //All i2c utility functions:
@@ -430,7 +450,10 @@ void echoesTimes()
   time_proc = micros()-time_in;
   Serial.println(F("\","));
   Serial.print(F("\t\tproc_time:"));
-  Serial.println(time_proc/1000);
+  Serial.print(time_proc/1000);
+  Serial.println(F("\","));
+  Serial.print(F("\t\tLoopsPerSecond:"));
+  Serial.println(_loopsPerSecond);
   Serial.println(F("\t}"));
 }
 
@@ -545,7 +568,7 @@ void echoesGestureVariables()
   value = i2cBuffer[0xa0];
   Serial.print(value);
   Serial.print(F(","));
-  Serial.print(F("GPEXTH:"));
+  Serial.print(F("GEXTH:"));
   value = i2cBuffer[0xa1];
   Serial.print(value);
   Serial.print(F(","));
@@ -569,7 +592,7 @@ void echoesGestureVariables()
       break;
   }
   Serial.print(F(","));
-  Serial.print(F("GEXMSX:\""));
+  Serial.print(F("GEXMSK:\""));
   value = i2cBuffer[0xa2]&0b00111100;
   value >>= 2;
   switch(value)
@@ -654,7 +677,7 @@ void echoesGestureVariables()
   }
   Serial.print(F(","));
   Serial.print(F("GWTIME:\""));
-  value = i2cBuffer[0xa3]&00000111;
+  value = i2cBuffer[0xa3]&0b00000111;
   switch(value)
   {
     case 0:
@@ -684,7 +707,9 @@ void echoesGestureVariables()
   }
   Serial.print(F(","));
   Serial.print(F("LEDBOOST:\""));
-  value = i2cBuffer[0x90]&00110000;
+  value = i2cBuffer[0x90]&0b00110000;
+  //Serial.print(value,2);
+  //Serial.print(F(" - "));
   value >>= 4;
   switch(value)
   {
@@ -818,6 +843,17 @@ void initSerialCommands()
   sCmd.addCommand("GON",   gestureOn);
   sCmd.addCommand("GOFF",  gestureOff);
   sCmd.addCommand("GMODE",  gmode);
+  sCmd.addCommand("GDIMS", gdims);
+  sCmd.addCommand("GPLEN", gplen);
+  sCmd.addCommand("GPULSE", gpulse);
+  sCmd.addCommand("LEDBOOST", ledboost);
+  sCmd.addCommand("GWTIME", gwtime);
+  sCmd.addCommand("GLDRIVE", gldrive);
+  sCmd.addCommand("GEXPERS", gexpers);
+  sCmd.addCommand("GEXMSK", gexmsk);
+  sCmd.addCommand("GFIFOTH", gfifoth);
+  sCmd.addCommand("GEXTH", gexth);
+  sCmd.addCommand("GPENTH", gpenth);
   sCmd.setDefaultHandler(unrecognized);
 }
 
@@ -1107,6 +1143,242 @@ void gmode()
       Wire.beginTransmission(CHIP_ADDR);
         Wire.write(0xaB);
         Wire.write(i2cBuffer[0xaB]|1);
+      Wire.endTransmission();
+    }
+  }
+}
+
+//GPENTH command
+void gpenth()
+{
+  int aNumber;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    if(aNumber < 256)
+    {
+      Wire.beginTransmission(CHIP_ADDR);
+        Wire.write(0xa0);
+        Wire.write(aNumber);
+      Wire.endTransmission();
+    }
+  }
+}
+
+//GEXTH command
+void gexth()
+{
+  int aNumber;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    if(aNumber < 256)
+    {
+      Wire.beginTransmission(CHIP_ADDR);
+        Wire.write(0xa1);
+        Wire.write(aNumber);
+      Wire.endTransmission();
+    }
+  }
+}
+
+//GFIFOTH command
+void gfifoth()
+{
+  int aNumber;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    if(aNumber < 4)
+    {
+      Wire.beginTransmission(CHIP_ADDR);
+        Wire.write(0xa2);
+        aNumber <<= 6;
+        Wire.write((i2cBuffer[0xa2]&0b00111111)|aNumber);
+      Wire.endTransmission();
+    }
+  }
+}
+
+//GEXMSK command
+void gexmsk()
+{
+  int aNumber;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    uint8_t value = 5;
+    switch(aNumber)
+    {
+      case 0: value = 0;
+              break;
+      case 1: value = 1;
+              break;
+      case 2: value = 2;
+              break;
+      case 3: value = 4;
+              break;
+      case 4: value = 8;
+              break;
+      case 5: value = 6;
+              break;
+      case 6: value = 15;
+              break;
+      default: value = 5;
+    }
+    value <<= 2;
+    Wire.beginTransmission(CHIP_ADDR);
+      Wire.write(0xa2);
+      Wire.write((i2cBuffer[0xa2]&0b11000011)|value);
+    Wire.endTransmission();
+  }
+}
+
+//GEXPERS command
+void gexpers()
+{
+  int aNumber;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    if(aNumber < 4)
+    {
+      Wire.beginTransmission(CHIP_ADDR);
+        Wire.write(0xa2);
+        Wire.write((i2cBuffer[0xa2]&0b11111100)|aNumber);
+      Wire.endTransmission();
+    }
+  }
+}
+
+//GLDRIVE command
+void gldrive()
+{
+  int aNumber;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    if(aNumber < 4)
+    {
+      Wire.beginTransmission(CHIP_ADDR);
+        Wire.write(0xa3);
+        aNumber <<= 3;
+        Wire.write((i2cBuffer[0xa3]&0b11100111)|aNumber);
+      Wire.endTransmission();
+    }
+  }
+}
+
+//GWTIME command
+void gwtime()
+{
+  int aNumber;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    if(aNumber < 8)
+    {
+      Wire.beginTransmission(CHIP_ADDR);
+        Wire.write(0xa3);
+        Wire.write((i2cBuffer[0xa3]&0b11111000)|aNumber);
+      Wire.endTransmission();
+    }
+  }
+}
+
+//LEDBOOST command
+void ledboost()
+{
+  int aNumber;
+  char *arg;
+  //uint8_t value = i2cBuffer[0x90]&0b11001111;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    if(aNumber < 4)
+    {
+      //Serial.println(aNumber);
+      aNumber <<= 4;
+
+      Wire.beginTransmission(CHIP_ADDR);
+        Wire.write(0x90);
+        Wire.write(aNumber);
+      Wire.endTransmission();
+    }
+    //Serial.println(value|aNumber,2);
+    //Serial.println(aNumber,2);
+    //delay(5000);
+  }
+}
+
+//GPULSE command
+void gpulse()
+{
+  int aNumber;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    if(aNumber < 64)
+    {
+      Wire.beginTransmission(CHIP_ADDR);
+        Wire.write(0xa6);
+        Wire.write((i2cBuffer[0xa6]&0b11000000)|aNumber);
+      Wire.endTransmission();
+    }
+  }
+}
+
+//GPLEN command
+void gplen()
+{
+  int aNumber;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    if(aNumber < 4)
+    {
+      aNumber <<= 6;
+      Wire.beginTransmission(CHIP_ADDR);
+        Wire.write(0xa6);
+        Wire.write((i2cBuffer[0x6]&0b00111111)|aNumber);
+      Wire.endTransmission();
+    }
+  }
+}
+
+//GDIMS command
+void gdims()
+{
+  int aNumber;
+  char *arg;
+
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Converts a char string to an integer
+    if(aNumber < 4)
+    {
+      Wire.beginTransmission(CHIP_ADDR);
+        Wire.write(0xaa);
+        Wire.write((i2cBuffer[0xaa]&0b11111100)|aNumber);
       Wire.endTransmission();
     }
   }
