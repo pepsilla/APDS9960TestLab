@@ -8,6 +8,7 @@ DropdownList com;
 DropdownList baud;
 DropdownList again;
 DropdownList pgain;
+DropdownList ggain;
 DropdownList pplen;
 DropdownList gdims;
 DropdownList gplen;
@@ -27,6 +28,8 @@ Numberbox gexth;
 Numberbox gpenth;
 Numberbox gpulse;
 Numberbox gwtime;
+Chart myChart;
+
 
 int APDS9960Buffer[] =
 {
@@ -55,9 +58,16 @@ String _textInfo = new String();
 Boolean _textMode = false;
 int _level;
 String[] arduinos;
+float proximityData[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+float upData[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+float downData[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+float leftData[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+float rightData[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int counterData = 0;
+int numberOfSeries = 20;
 
 void setup(){
-  size(800, 650);
+  size(1024, 768);
   ControlP5 cp5 = new ControlP5(this);
   surface.setTitle("APDS9660_TestLab@pepsilla");
 
@@ -93,6 +103,11 @@ void setup(){
   //PGAIN dropdown
    pgain = cp5.addDropdownList("PGAIN")
     .setPosition(400, 20)
+    .setSize(50,200);
+ 
+ //GGAIN dropdown
+   ggain = cp5.addDropdownList("GGAIN")
+    .setPosition(400, 50)
     .setSize(50,200);
   
   //PPLEN dropdown
@@ -202,7 +217,7 @@ void setup(){
   //gpulse values
    gpulse = cp5.addNumberbox("GPULSE")
     .setPosition(40,520)
-             .setSize(40,410)
+             .setSize(40,14)
              .setScrollSensitivity(1)
              .setRange(0,64)
              .setValue(100)
@@ -260,6 +275,12 @@ void setup(){
   pgain.addItem("8x",3);
   pgain.close();
   
+  ggain.addItem("1x",0);
+  ggain.addItem("2x",1);
+  ggain.addItem("4x",2);
+  ggain.addItem("8x",3);
+  ggain.close();
+  
   pplen.addItem("4us",0);
   pplen.addItem("8us",1);
   pplen.addItem("16us",2);
@@ -312,13 +333,54 @@ void setup(){
   gexmsk.addItem("ALL excluded",7);
   gexmsk.close();
   
+  
+  
+  myChart = cp5.addChart("hello")
+               .setPosition(710, 100)
+               .setSize(200, 200)
+               .setRange(0, 255)
+               .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
+               ;
+
+  myChart.getColor().setBackground(color(255, 100));
+
+
+  myChart.addDataSet("proximity");
+  myChart.setColors("proximity", color(255,0,255),color(255,0,0));
+  myChart.setData("proximity", proximityData);
+
+  myChart.setStrokeWeight(1.5);
+
+  myChart.addDataSet("up");
+  myChart.setColors("up", color(255,0,0), color(255, 0, 0));
+  myChart.updateData("up", upData);
+  
+  myChart.addDataSet("down");
+  myChart.setColors("down", color(0,255,0), color(255, 0,0));
+  myChart.updateData("down", downData);
+  
+  myChart.addDataSet("left");
+  myChart.setColors("left", color(255,255,0), color(255, 0, 0));
+  myChart.updateData("left", leftData);
+  
+  myChart.addDataSet("right");
+  myChart.setColors("right", color(0,0,255), color(255, 0, 0));
+  myChart.updateData("right", rightData);
+  
   hideChipControls();
 }
 
 void draw(){
   background(0);
   //frame.setTitle("SerialWHEATER:"+otherValues);
-
+  if(myChart.isVisible())
+  {
+     myChart.updateData("proximity",proximityData);
+     myChart.updateData("up",upData);
+     myChart.updateData("down",downData);
+     myChart.updateData("left",leftData);
+     myChart.updateData("right",rightData);
+  }
 }
 
 
@@ -520,6 +582,16 @@ void controlEvent(ControlEvent theEvent) {
         miPuerto.write("\r\n");
       }
      }
+  }else if (theEvent.getName() == "GGAIN"){
+    if(miPuerto!=null)
+    {
+      if(int(val)<4)
+      {
+        miPuerto.write("GGAIN ");
+        miPuerto.write(str(int(val)));
+        miPuerto.write("\r\n");
+      }
+     }
   }
   
   
@@ -555,6 +627,126 @@ void serialEvent (Serial miPuerto) { // Lee los datos capturados por el puerto d
              _level = 0;
              _textInfo += StringEntrante;
              myTextarea.setText (_textInfo);
+             //Deco values for plotiing
+             int variableData = 0;
+             int endOfLine = 0;
+             String[] variables;
+             String variable;
+             int lenVariables = 0;
+             variableData = _textInfo.indexOf("PROXIMITY_DATA{")+15;
+             if (variableData>0)
+             {
+               endOfLine = _textInfo.indexOf("}");
+               if (endOfLine>0)
+               {
+                 variable = _textInfo.substring(variableData,endOfLine);
+                 variables = split(variable,",");
+                 lenVariables = variables.length;
+                 if(lenVariables==1)
+                 {
+                   variables = split(variable,":");
+                   if(variables.length == 2)
+                   {
+                     proximityData[counterData] = int(variables[1]);
+                   }
+                   //print(variable);
+                   //println(variables.length);
+                 }
+               }
+             }
+             variableData = _textInfo.indexOf("GESTURE_DATA:{");
+             //println(variableData);
+             if (variableData>0)
+             {
+               String gesdata = _textInfo.substring(variableData);
+               //println("**** GEST DATA DETECTED ***");
+               
+               endOfLine = gesdata.indexOf("}");
+               if (endOfLine>0)
+               {
+                 variable = gesdata.substring(14,endOfLine);
+                 //println(variable);
+                 //println("***************************");
+                 variables = split(variable,",");
+                 lenVariables = variables.length;
+                 //println(variables);
+                 //println(variables.length);
+                 
+                 if(lenVariables==4)
+                 {
+                   for(int counter=0;counter<lenVariables;counter++)
+                   {
+                     String variablePair[] = split(variables[counter],":");
+                     if(variablePair.length == 2)
+                     {
+                       String chanelVar = variablePair[0];
+                       //println("CHANEL");
+                       //println(chanelVar);
+                       switch (chanelVar)
+                       {
+                        case "UP":
+                          upData[counterData] = int(variablePair[1]);
+                          //println("up");
+                          break;
+                        case "DOWN":
+                          downData[counterData] = int(variablePair[1]);
+                          //println("down");
+                          break;
+                        case "LEFT":
+                          leftData[counterData] = int(variablePair[1]);
+                          //println("left");
+                          break;
+                        case "RIGHT":
+                          rightData[counterData] = int(variablePair[1]);
+                          //println("right");
+                          break;
+                       }
+                     }
+                     //print(variable);
+                   }
+                   //All series processes
+                   int valueMax = 0;
+                   String nameMax = "--";
+                   if(upData[counterData]>valueMax)
+                   {
+                     valueMax = int(upData[counterData]);
+                     nameMax = "UP";
+                   }
+                   if(downData[counterData]>valueMax)
+                   {
+                     valueMax = int(downData[counterData]);
+                     nameMax = "DOWN";
+                   }
+                   if(leftData[counterData]>valueMax)
+                   {
+                     valueMax = int(leftData[counterData]);
+                     nameMax = "LEFT";
+                   }
+                   if(rightData[counterData]>valueMax)
+                   {
+                     valueMax = int(rightData[counterData]);
+                     nameMax = "RIGHT";
+                   }
+                   print(nameMax+":");
+                   println(valueMax);
+                 }
+               }
+             }
+             if(counterData<numberOfSeries-1)counterData++;
+             else 
+             {
+               for(int counter = 1;counter<numberOfSeries;counter++)
+               {
+                 proximityData[counter-1] = proximityData[counter];
+                 upData[counter-1] = upData[counter];
+                 downData[counter-1] = downData[counter];
+                 leftData[counter-1] = leftData[counter];
+                 rightData[counter-1] = rightData[counter];
+               }
+               
+             }
+             //println(upData);
+             //println(counterData);
            }
            else  _textInfo += StringEntrante;
          }
@@ -562,7 +754,7 @@ void serialEvent (Serial miPuerto) { // Lee los datos capturados por el puerto d
          {
 
            String StringValores[] = split(StringEntrante,":");  // divide valores
-           print(StringValores);
+           //print(StringValores);
            int parValues = StringValores.length;
            int fila = 0;
            if(parValues==2)
@@ -622,6 +814,8 @@ void hideChipControls()
   gfifoth.hide();
   gexth.hide();
   gpenth.hide();
+  ggain.hide();
+  myChart.hide();
 }
 
 void showChipControls()
@@ -648,4 +842,6 @@ void showChipControls()
   gfifoth.show();
   gexth.show();
   gpenth.show();
+  ggain.show();
+  myChart.show();
 }
